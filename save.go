@@ -28,24 +28,27 @@ func WriteRedis(client Client, name, key, value string) error {
 		}
 		return nil
 	}
+
 	var txf = func(tx *redis.Tx) error {
-		cmds, err := tx.TxPipelined(ctx, pif)
+		_, err := tx.TxPipelined(ctx, pif)
 		if err != nil {
 			return err
-		}
-
-		for _, cmd := range cmds {
-			cmd.
 		}
 
 		return nil
 	}
 
+	cmd := client.Rdb.SetNX(ctx, name, lock.GenerateRedisLockVal(client.lock), time.Duration(15*time.Second))
+	if cmd.Err() != nil {
+		zap.S().Error(cmd.Err())
+		return cmd.Err()
+	}
+
 	for i := 0; i < 10; i++ {
-		err := client.Rdb.Watch(ctx, txf)
+		err := client.Rdb.Watch(ctx, txf, name)
 		if err == nil {
 			// Success.
-			return
+			return nil
 		}
 		if err == redis.TxFailedErr {
 			// Optimistic lock lost. Retry.
@@ -53,12 +56,6 @@ func WriteRedis(client Client, name, key, value string) error {
 		}
 		// Return any other error.
 		return err
-	}
-
-	cmd := client.Rdb.SetNX(ctx, name, lock.GenerateRedisLockVal(client.lock), time.Duration(15*time.Second))
-	if cmd.Err() != nil {
-		zap.S().Error(cmd.Err())
-		return cmd.Err()
 	}
 
 	return nil

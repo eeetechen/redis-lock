@@ -80,6 +80,11 @@ Retry:
 		zap.S().Error("Redis link Err. err:= %w", cmd.Err())
 		return "", cmd.Err()
 	}
+
+	if cmd.Err() == redis.Nil {
+		goto NotLockedJump
+	}
+
 	if cmd.Err() == nil {
 		strVal := cmd.Val()
 		strStatus, _, _, err := distributed_lock.ParseRedisLockVal(strVal)
@@ -95,6 +100,7 @@ Retry:
 		return "", err
 	}
 
+NotLockedJump:
 	cmd = client.Rdb.Get(ctx, key)
 	if cmd.Err() != nil {
 		if cmd.Err() == redis.Nil {

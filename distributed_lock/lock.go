@@ -1,4 +1,4 @@
-package lock
+package distributed_lock
 
 import (
 	"math/rand"

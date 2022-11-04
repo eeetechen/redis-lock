@@ -1,4 +1,4 @@
-package lock
+package distributed_lock
 
 const (
 	RedisReadLocked uint8 = iota + 1
@@ -6,3 +6,5 @@ const (
 )
 
 const RedisTTL int64 = 15
+
+const RetryMaxTime int = 10

@@ -1,4 +1,4 @@
-package lock
+package distributed_lock
 
 import (
 	"fmt"
@@ -18,8 +18,8 @@ func GenerateRedisLockVal(rl *RedisLock) string {
 func ParseRedisLockVal(result string) (uint8, int64, int, error) {
 	valSli := strings.Split(result, ".")
 	if len(valSli) != 3 {
-		zap.S().Error("parse lock failure")
-		return 0, 0, 0, fmt.Errorf("parse lock failure len(result) != 2 ")
+		zap.S().Error("parse distributed_lock failure")
+		return 0, 0, 0, fmt.Errorf("parse distributed_lock failure len(result) != 2 ")
 	}
 	Status, err := strconv.Atoi(valSli[0])
 	if err != nil {

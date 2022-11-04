@@ -2,12 +2,12 @@ package redis_lock
 
 import (
 	"github.com/go-redis/redis/v8"
-	"redis-lock/lock"
+	"redis-lock/distributed_lock"
 )
 
 type Client struct {
 	Rdb  *redis.Client
-	lock *lock.RedisLock
+	lock *distributed_lock.RedisLock
 }
 
 type Option struct {
@@ -30,11 +30,11 @@ func NewClient(option Option) Client {
 }
 
 func (c *Client) GetRedisReadLock(name string) {
-	c.lock = lock.NewRedisLock(name, lock.RedisReadLocked)
+	c.lock = distributed_lock.NewRedisLock(name, distributed_lock.RedisReadLocked)
 }
 
 func (c *Client) GetRedisWriteLock(name string) {
-	c.lock = lock.NewRedisLock(name, lock.RedisWriteLocked)
+	c.lock = distributed_lock.NewRedisLock(name, distributed_lock.RedisWriteLocked)
 }
 
 func (c *Client) ClearLock() {

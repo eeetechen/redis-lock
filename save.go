@@ -3,7 +3,7 @@ package redis_lock
 import (
 	"context"
 	"github.com/go-redis/redis/v8"
-	"redis-lock/lock"
+	"redis-lock/distributed_lock"
 	"time"
 
 	"go.uber.org/zap"
@@ -38,7 +38,7 @@ func WriteRedis(client Client, name, key, value string) error {
 		return nil
 	}
 
-	cmd := client.Rdb.SetNX(ctx, name, lock.GenerateRedisLockVal(client.lock), time.Duration(15*time.Second))
+	cmd := client.Rdb.SetNX(ctx, name, distributed_lock.GenerateRedisLockVal(client.lock), time.Duration(15*time.Second))
 	if cmd.Err() != nil {
 		zap.S().Error(cmd.Err())
 		return cmd.Err()
@@ -51,7 +51,7 @@ func WriteRedis(client Client, name, key, value string) error {
 			return nil
 		}
 		if err == redis.TxFailedErr {
-			// Optimistic lock lost. Retry.
+			// Optimistic distributed_lock lost. Retry.
 			continue
 		}
 		// Return any other error.
@@ -64,7 +64,7 @@ func WriteRedis(client Client, name, key, value string) error {
 // 判断写锁的读取
 func INDReadRedis(client Client, name, key string) (string, error) {
 	//本地超时
-	var ctx, cancel = context.WithTimeout(context.Background(), time.Duration(lock.RedisTTL)*time.Second)
+	var ctx, cancel = context.WithTimeout(context.Background(), time.Duration(distributed_lock.RedisTTL)*time.Second)
 	defer cancel()
 
 	client.GetRedisReadLock(name)
@@ -82,13 +82,13 @@ Retry:
 	}
 	if cmd.Err() == nil {
 		strVal := cmd.Val()
-		strStatus, _, _, err := lock.ParseRedisLockVal(strVal)
+		strStatus, _, _, err := distributed_lock.ParseRedisLockVal(strVal)
 		if err != nil {
 			zap.S().Error("INDReadRedis ParseRedisLockVal Err. err:= %w", err)
 			return "", err
 		}
 
-		if strStatus == lock.RedisWriteLocked && retryCount < 10 {
+		if strStatus == distributed_lock.RedisWriteLocked && retryCount < distributed_lock.RetryMaxTime {
 			retryCount++
 			goto Retry
 		}
@@ -110,7 +110,7 @@ Retry:
 // 直接的读取
 func DReadRedis(client Client, key string) (string, error) {
 	//本地超时
-	var ctx, cancel = context.WithTimeout(context.Background(), time.Duration(lock.RedisTTL)*time.Second)
+	var ctx, cancel = context.WithTimeout(context.Background(), time.Duration(distributed_lock.RedisTTL)*time.Second)
 	defer cancel()
 
 	cmd := client.Rdb.Get(ctx, key)
